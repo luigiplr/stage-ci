@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const {setup} = require('./core');
 const log = require('./logger');
 

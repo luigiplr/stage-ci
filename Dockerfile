@@ -6,6 +6,7 @@ WORKDIR /stage-ci
 
 COPY package.json .
 RUN npm install --production
+RUN npm run build
 
 ADD . .
 

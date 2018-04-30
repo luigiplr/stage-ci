@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const path = require('path');
 const bodyParser = require('body-parser');
 const server = require('express')();
@@ -24,6 +26,8 @@ server.post('/', (request, response) => {
     if (keys.includes('x-github-event')) result = github({headers, body});
     if (keys.includes('x-gitlab-event')) result = gitlab({headers, body});
   } catch (error) {
+    console.error(error);
+
     if (error.asJson && error.asJson.error && error.asJson.error.type === 'fatal') {
       response.status(500).send(error.asJson);
       return;
@@ -44,6 +48,8 @@ server.post('/', (request, response) => {
       await stage(localDirectory, {alias});
       await setStatus('success', 'Deployed to Now', alias);
     } catch (error) {
+      console.error(error);
+
       log.error(error.stack);
       if (error.response) {
         log.error(error.response.data.message);
