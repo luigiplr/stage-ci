@@ -4,7 +4,6 @@
   "main": "server.js",
   "license": "MIT",
   "scripts": {
-    "build": "node ./src/build.js",
     "start": "node ./src/server.js",
     "dev": "nodemon ./src/server.js",
     "test": "xo && ava"

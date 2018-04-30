@@ -33,7 +33,8 @@ server.post('/', (request, response) => {
       return;
     }
   }
-  const {success, ref, sha, name, alias, cloneUrl, setStatus, deploy} = result;
+
+  const { success, ref, sha, name, alias, cloneUrl, setStatus, deploy } = result;
   response.sendStatus((success) ? 200 : 204);
   if (!success) return;
 
@@ -44,8 +45,8 @@ server.post('/', (request, response) => {
     try {
       await deploy();
       await setStatus('pending', 'Staging...');
-      await sync(cloneUrl, localDirectory, {ref, checkout: sha});
-      await stage(localDirectory, {alias});
+      await sync(cloneUrl, localDirectory, { ref, checkout: sha });
+      await stage(localDirectory, { alias, ref });
       await setStatus('success', 'Deployed to Now', alias);
     } catch (error) {
       console.error(error);

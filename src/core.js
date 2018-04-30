@@ -25,66 +25,32 @@ if (!GITHUB_TOKEN && !GITLAB_TOKEN) throw new Error('GITHUB_TOKEN and/or GITLAB_
 if (!GITHUB_WEBHOOK_SECRET && !GITLAB_WEBHOOK_SECRET) throw new Error('GITHUB_WEBHOOK_SECRET and/or GITLAB_WEBHOOK_SECRET must be defined in environment. Create one at https://github.com/{OWNERNAME}/{REPONAME}/settings/hooks or https://gitlab.com/{OWNERNAME}/{REPONAME}/settings/integration (swap in the path to your repo)');
 if (!ZEIT_API_TOKEN) throw new Error('ZEIT_API_TOKEN must be defined in environment. Create one at https://zeit.co/account/tokens');
 
-if (!NOW_VERSION) NOW_VERSION = '8.3.9';
-
-function setup() {
-  return new Promise((resolve, reject) => {
-    log.info('> Checking for now-cli binary..');
-    if (fs.existsSync('./now-cli')) {
-      log.info('> now-cli exists, skipping download..');
-      return resolve();
-    }
-
-    log.info('> now-cli not found..');
-    log.info('> Downloading now-cli binary..');
-
-    const type = {
-      darwin: 'macos',
-      linux: 'linux',
-      win32: 'win.exe',
-      alpine: 'alpine'
-    };
-
-    const nowFile = fs.createWriteStream('./now-cli', {encoding: 'binary', flags: 'a', mode: 0o777});
-
-    nowFile.on('close', () => {
-      log.info('> Finished downloading now-cli..');
-      return resolve();
-    });
-
-    nowFile.on('error', (err) => {
-      return reject(err);
-    });
-
-    const url = `https://github.com/zeit/now-cli/releases/download/${NOW_VERSION}/now-${type[os.platform()]}`;
-
-    axios({
-      method: 'get',
-      url,
-      responseType: 'stream'
-    }).then((response) => {
-      response.data.pipe(nowFile);
-    }).catch((error) => {
-      return reject(error);
-    });
-  });
-}
-
 const now = (cmd='') => {
-  return `now ${cmd} --token ${ZEIT_API_TOKEN}`;
+  return `now ${cmd} --token ${ZEIT_API_TOKEN} --team reelgood`;
 };
 
-function stage(cwd, {alias}) {
+function stage(cwd, { alias, ref }) {
   return new Promise((resolve, reject) => {
+    log.info(`> Deploying to now.sh`);
+
     let url, aliasError;
-    const nowProc = exec(now(envs()), {cwd});
-    nowProc.stderr.on('data', (error) => reject(new Error(error)));
+    const nowProc = exec(now(`${envs()} -n ${`web-app-${ref}`}`), { cwd });
+    nowProc.stderr.on('data', (error) => {
+      if (error.includes('Build failed')) {
+        reject(new Error(error))
+      }
+    });
     nowProc.stdout.on('data', (data) => {if (!url) url = data;});
     nowProc.stdout.on('close', () => {
       if (!url) return reject(new Error('Deployment failed'));
       log.info(`> Setting ${url} to alias ${alias}`);
       const aliasProc = exec(now(`alias set ${url} ${alias}`), {cwd});
-      aliasProc.stderr.on('data', (error) => {aliasError = error;});
+      aliasProc.stderr.on('data', (error) => {
+        if (error.includes('Error')) {
+          aliasError = error;
+        }
+      });
+
       aliasProc.on('close', () => {
         if (aliasError) return reject(new Error(aliasError));
         log.info(`> Alias ready ${alias}`);
@@ -147,12 +113,14 @@ function github({headers, body}) {
     }
   });
 
+  const alias = createAliasUrl(repository.name, ref, sha)
+
   return {
     ref,
     sha,
     success: true,
     name: repository.full_name,
-    alias: createAliasUrl(repository.name, ref),
+    alias,
     cloneUrl: createCloneUrl(pull_request.head.repo.clone_url, GITHUB_TOKEN),
     deploy: async () => {
       // https://developer.github.com/v3/repos/deployments/#create-a-deployment-status
@@ -161,8 +129,7 @@ function github({headers, body}) {
         ref: sha,
         auto_merge: false,
         required_contexts: [],
-        transient_environment: true,
-        environment: 'PR staging'
+        transient_environment: true
       });
       deploymentId = result.data.id;
     },
@@ -209,7 +176,7 @@ function gitlab({headers, body} = {}) {
     sha: id,
     success: true,
     name: target.path_with_namespace,
-    alias: createAliasUrl(source.name, source_branch),
+    alias: createAliasUrl(source.name, source_branch, id),
     cloneUrl: createCloneUrl(source.http_url, `gitlab-ci-token:${GITLAB_TOKEN}`),
     setStatus: (state, description, targetUrl) => {
       if (state === 'error')
@@ -241,7 +208,6 @@ function isGitLabRequestSafe({headers}) {
 }
 
 module.exports = {
-  setup,
   stage,
   sync,
   github,
