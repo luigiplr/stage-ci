@@ -1,4 +1,4 @@
-FROM node:7-slim
+FROM node:8.11.1-slim
 
 RUN apt-get -y update && apt-get -y install git
 
