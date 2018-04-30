@@ -4,11 +4,8 @@ RUN apt-get -y update && apt-get -y install git
 
 WORKDIR /stage-ci
 
-COPY package.json .
-RUN npm install --production
-
 ADD . .
-
+RUN npm install --production
 RUN npm run build
 
 EXPOSE 3000
