@@ -71,8 +71,7 @@ function setup() {
 }
 
 const now = (cmd='') => {
-  const nowBin = path.resolve(__dirname, '..', 'now-cli');
-  return `${nowBin} ${cmd} --token ${ZEIT_API_TOKEN}`;
+  return `now ${cmd} --token ${ZEIT_API_TOKEN}`;
 };
 
 function stage(cwd, {alias}) {
