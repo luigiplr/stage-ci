@@ -34,7 +34,7 @@ function stage(cwd, { alias, ref }) {
     log.info(`> Deploying to now.sh`);
 
     let url, aliasError;
-    const nowProc = exec(now(`${envs()} -n ${`web-app-${ref}`}`), { cwd });
+    const nowProc = exec(now(`${envs()} -n ${`pr:web-app|${ref}`}`), { cwd });
     nowProc.stderr.on('data', (error) => {
       if (error.includes('Build failed')) {
         reject(new Error(error))
@@ -56,6 +56,18 @@ function stage(cwd, { alias, ref }) {
         log.info(`> Alias ready ${alias}`);
         resolve(alias);
       });
+    });
+  });
+}
+
+function clean(ref) {
+  return new Promise((resolve, reject) => {
+    log.info(`> Deploying to now.sh`);
+
+    const nowProc = exec(now(`rm ${`pr:web-app|${ref}`} --safe`), { cwd });
+
+    nowProc.stdout.on('close', () => {
+      resolve()
     });
   });
 }
@@ -129,7 +141,8 @@ function github({headers, body}) {
         ref: sha,
         auto_merge: false,
         required_contexts: [],
-        transient_environment: true
+        transient_environment: true,
+        environment: 'PR Staging'
       });
       deploymentId = result.data.id;
     },
