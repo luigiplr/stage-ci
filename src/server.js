@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const server = require('express')();
 const Queue = require('promise-queue');
 const {version} = require('../package.json');
-const {stage, sync, github, gitlab} = require('./core');
+const {stage, sync, github, gitlab, rm} = require('./core');
 const log = require('./logger');
 
 const PORT = process.env.PORT || 3000;
@@ -48,6 +48,8 @@ server.post('/', (request, response) => {
       await sync(cloneUrl, localDirectory, { ref, checkout: sha });
       await stage(localDirectory, { alias, ref });
       await setStatus('success', 'Deployed to Now', alias);
+
+      await rm(ref, false);
     } catch (error) {
       console.error(error);
 

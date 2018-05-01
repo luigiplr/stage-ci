@@ -31,10 +31,10 @@ const now = (cmd='') => {
 
 function stage(cwd, { alias, ref }) {
   return new Promise((resolve, reject) => {
-    log.info(`> Deploying to now.sh`);
+    log.info(`> Deploying`);
 
     let url, aliasError;
-    const nowProc = exec(now(`${envs()} -n ${`pr:web-app|${ref}`}`), { cwd });
+    const nowProc = exec(now(`${envs()} -n ${`pr-web-app-${ref}`}`), { cwd });
     nowProc.stderr.on('data', (error) => {
       if (error.includes('Build failed')) {
         reject(new Error(error))
@@ -60,11 +60,11 @@ function stage(cwd, { alias, ref }) {
   });
 }
 
-function clean(ref) {
+function rm(ref, all = false) {
   return new Promise((resolve, reject) => {
-    log.info(`> Deploying to now.sh`);
+    log.info(`> Purging old deployments`);
 
-    const nowProc = exec(now(`rm ${`pr:web-app|${ref}`} --safe`), { cwd });
+    const nowProc = exec(now(`rm ${`pr-web-app-${ref}`} --safe --yes`));
 
     nowProc.stdout.on('close', () => {
       resolve()
@@ -152,8 +152,7 @@ function github({headers, body}) {
         state,
         description,
         environment_url: targetUrl,
-        target_url: targetUrl,
-        auto_inactive: false
+        target_url: targetUrl
       });
     }
   };
@@ -224,5 +223,6 @@ module.exports = {
   stage,
   sync,
   github,
-  gitlab
+  gitlab,
+  rm
 };
