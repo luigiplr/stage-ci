@@ -64,7 +64,13 @@ function rm(ref, all = false) {
   return new Promise((resolve, reject) => {
     log.info(`> Purging old deployments`);
 
-    const nowProc = exec(now(`rm ${`pr-web-app-${ref}`} --safe --yes`));
+    let command = `rm ${`pr-web-app-${ref}`} --yes`
+
+    if (!all) {
+      command += ' --safe'
+    }
+
+    const nowProc = exec(now(command));
 
     nowProc.stdout.on('close', () => {
       resolve()
@@ -111,10 +117,17 @@ function github({headers, body}) {
       }
     });
 
-  if (!['opened', 'synchronize'].includes(body.action)) return {success: false};
-
   const {repository, pull_request} = body;
   const {ref, sha} = pull_request.head;
+
+
+  if (!['opened', 'synchronize'].includes(body.action)) {
+    return {
+      success: false,
+      ref
+    };
+  }
+
   const {deployments_url} = repository;
   let deploymentId;
 

@@ -10,7 +10,7 @@ const log = require('./logger');
 
 const PORT = process.env.PORT || 3000;
 const DEPLOY_DIR = path.resolve('/tmp/.stage-ci');
-const queue = new Queue(1, process.env.STAGE_CI_MAX_QUEUE || 100);
+const queue = new Queue(10, process.env.STAGE_CI_MAX_QUEUE || 100);
 
 server.use(bodyParser.json());
 
@@ -35,8 +35,16 @@ server.post('/', (request, response) => {
   }
 
   const { success, ref, sha, name, alias, cloneUrl, setStatus, deploy } = result;
+
   response.sendStatus((success) ? 200 : 204);
-  if (!success) return;
+
+  if (!success) {
+    queue.add(async () => {
+      await rm(ref, true);
+    })
+
+    return;
+  }
 
   queue.add(async () => {
     log.info(`> Deploying ${name}@${ref}#${sha} to ${alias}`);
