@@ -51,6 +51,8 @@ server.post('/', (request, response) => {
     const localDirectory = path.join(DEPLOY_DIR, name);
 
     try {
+      await rm(ref, false);
+
       await deploy();
       await setStatus('pending', 'Staging...');
       await sync(cloneUrl, localDirectory, { ref, checkout: sha });
