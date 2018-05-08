@@ -43,34 +43,16 @@ function stage(cwd, { alias, ref }) {
     nowProc.stdout.on('data', (data) => {if (!url) url = data;});
     nowProc.stdout.on('close', () => {
       if (!url) return reject(new Error('Deployment failed'));
-      log.info(`> Setting ${url} to alias ${alias}`);
-      const aliasProc = exec(now(`alias set ${url} ${alias}`), {cwd});
-      aliasProc.stderr.on('data', (error) => {
-        if (error.includes('Error')) {
-          aliasError = error;
-        }
-      });
-
-      aliasProc.on('close', () => {
-        if (aliasError) return reject(new Error(aliasError));
-        log.info(`> Alias ready ${alias}`);
-        resolve(alias);
-      });
+      resolve(url);
     });
   });
 }
 
 function rm(ref, all = false) {
   return new Promise((resolve, reject) => {
-    log.info(`> Purging old deployments`);
+    log.info(`> Purging deployments`);
 
-    let command = `rm ${`pr-web-app-${ref}`} --yes`
-
-    if (!all) {
-      command += ' --safe'
-    }
-
-    const nowProc = exec(now(command));
+    const nowProc = exec(now(`rm ${`pr-web-app-${ref}`} --yes`));
 
     nowProc.stdout.on('close', () => {
       resolve()
@@ -138,14 +120,11 @@ function github({headers, body}) {
     }
   });
 
-  const alias = createAliasUrl(repository.name, ref, sha)
-
   return {
     ref,
     sha,
     success: true,
     name: repository.full_name,
-    alias,
     cloneUrl: createCloneUrl(pull_request.head.repo.clone_url, GITHUB_TOKEN),
     deploy: async () => {
       // https://developer.github.com/v3/repos/deployments/#create-a-deployment-status

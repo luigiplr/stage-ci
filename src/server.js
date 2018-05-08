@@ -34,7 +34,7 @@ server.post('/', (request, response) => {
     }
   }
 
-  const { success, ref, sha, name, alias, cloneUrl, setStatus, deploy } = result;
+  const { success, ref, sha, name, cloneUrl, setStatus, deploy } = result;
 
   response.sendStatus((success) ? 200 : 204);
 
@@ -47,7 +47,7 @@ server.post('/', (request, response) => {
   }
 
   queue.add(async () => {
-    log.info(`> Deploying ${name}@${ref}#${sha} to ${alias}`);
+    log.info(`> Deploying ${name}@${ref}#${sha}`);
     const localDirectory = path.join(DEPLOY_DIR, name);
 
     try {
@@ -56,10 +56,8 @@ server.post('/', (request, response) => {
       await deploy();
       await setStatus('pending', 'Staging...');
       await sync(cloneUrl, localDirectory, { ref, checkout: sha });
-      await stage(localDirectory, { alias, ref });
-      await setStatus('success', 'Deployed to Now', alias);
-
-      await rm(ref, false);
+      const url = await stage(localDirectory, { ref });
+      await setStatus('success', 'Deployed to Now', url);
     } catch (error) {
       console.error(error);
 
@@ -69,7 +67,7 @@ server.post('/', (request, response) => {
         log.error(error.response.data.errors);
         log.error(error.response.data.documentation_url);
       }
-      await setStatus('error', 'Error', alias);
+      await setStatus('error', 'Error');
     }
 
     log.info('> Done!');
